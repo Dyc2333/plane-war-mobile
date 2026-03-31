@@ -12,6 +12,78 @@
 <body>
   <div id="game-container">
     <canvas id="gameCanvas"></canvas>
+    
+    <!-- 开始游戏菜单 -->
+    <div id="start-menu" class="menu-overlay">
+      <div class="menu-content">
+        <h1 class="game-title">飞机大战</h1>
+        <div class="menu-buttons">
+          <button id="start-btn" class="menu-btn primary-btn">开始游戏</button>
+          <button id="instructions-btn" class="menu-btn">游戏说明</button>
+        </div>
+        <div class="score-display">
+          <p>最高分：<span id="high-score">0</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏说明弹窗 -->
+    <div id="instructions-modal" class="modal">
+      <div class="modal-content">
+        <h2>游戏说明</h2>
+        <div class="instructions-list">
+          <p><strong>PC 端操作：</strong></p>
+          <ul>
+            <li>方向键 / WASD - 移动飞机</li>
+            <li>空格键 - 射击</li>
+            <li>B 键 - 使用炸弹</li>
+            <li>P / ESC - 暂停游戏</li>
+          </ul>
+          <p><strong>移动端操作：</strong></p>
+          <ul>
+            <li>左侧虚拟摇杆 - 移动飞机</li>
+            <li>右侧射击按钮 - 射击</li>
+            <li>炸弹按钮 - 使用炸弹</li>
+          </ul>
+          <p><strong>游戏目标：</strong></p>
+          <ul>
+            <li>击落敌机获得分数</li>
+            <li>收集道具增强能力</li>
+            <li>躲避敌机和子弹</li>
+            <li>坚持更长时间获得更高分数</li>
+          </ul>
+        </div>
+        <button id="close-instructions-btn" class="menu-btn primary-btn">知道了</button>
+      </div>
+    </div>
+
+    <!-- 暂停菜单 -->
+    <div id="pause-menu" class="menu-overlay" style="display: none;">
+      <div class="menu-content">
+        <h2>游戏暂停</h2>
+        <div class="menu-buttons">
+          <button id="resume-btn" class="menu-btn primary-btn">继续游戏</button>
+          <button id="restart-btn" class="menu-btn">重新开始</button>
+          <button id="menu-btn" class="menu-btn">返回主菜单</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏结束菜单 -->
+    <div id="gameover-menu" class="menu-overlay" style="display: none;">
+      <div class="menu-content">
+        <h2>游戏结束</h2>
+        <div class="gameover-stats">
+          <p>得分：<span id="final-score">0</span></p>
+          <p>最高分：<span id="gameover-highscore">0</span></p>
+          <p id="new-record" style="display: none; color: #ffd700; font-size: 1.2em;">🏆 新纪录！</p>
+        </div>
+        <div class="menu-buttons">
+          <button id="gameover-restart-btn" class="menu-btn primary-btn">再来一局</button>
+          <button id="gameover-menu-btn" class="menu-btn">返回主菜单</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="loading">
@@ -34,22 +106,26 @@
   <script src="js/game.js"></script>
 
   <script>
+    // 游戏实例
+    let game = null;
+
     // 游戏初始化
     window.addEventListener('load', function() {
       const canvas = document.getElementById('gameCanvas');
       const loading = document.getElementById('loading');
+      const highScoreDisplay = document.getElementById('high-score');
 
-      // 创建游戏实例
-      const game = new Game(canvas);
+      // 显示最高分
+      highScoreDisplay.textContent = Storage.getHighScore();
+
+      // 创建游戏实例（但不立即开始）
+      game = new Game(canvas);
 
       // 隐藏加载界面
       loading.style.display = 'none';
 
       // 处理窗口大小变化
       window.addEventListener('resize', handleResize);
-
-      // 处理失去焦点时自动暂停
-      window.addEventListener('blur', handleBlur);
 
       // 处理暂停按键
       window.addEventListener('keydown', handleKeyDown);
@@ -87,41 +163,94 @@
           container.style.height = containerHeight + 'px';
           container.style.top = '50%';
           container.style.left = '50%';
-          container.style.marginTop = -(containerHeight / 2) + 'px';
-          container.style.marginLeft = -(containerWidth / 2) + 'px';
+          container.style.transform = 'translate(-50%, -50%)';
           container.style.position = 'absolute';
         }
 
-        // Canvas 保持固定分辨率，通过 CSS 缩放显示
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        
-        // 通知触摸处理器更新按钮位置
-        if (game && game.touchHandler) {
-          game.touchHandler.updateButtonPositions();
-        }
-      }
-
-      function handleBlur() {
-        if (game.state === GameState.PLAYING) {
-          game.pause();
+        // 更新画布尺寸
+        if (game) {
+          game.handleResize();
         }
       }
 
       function handleKeyDown(e) {
-        // 在暂停状态下按 P 或 ESC 继续游戏
-        if (game.state === GameState.PAUSED) {
+        if (game && game.state === 'playing') {
           if (e.code === 'KeyP' || e.code === 'Escape') {
-            game.resume();
+            e.preventDefault();
+            game.togglePause();
+            updatePauseMenu();
           }
         }
       }
 
-      // 初始调整大小
-      handleResize();
+      // 菜单按钮事件
+      document.getElementById('start-btn').addEventListener('click', startGame);
+      document.getElementById('instructions-btn').addEventListener('click', showInstructions);
+      document.getElementById('close-instructions-btn').addEventListener('click', hideInstructions);
+      document.getElementById('resume-btn').addEventListener('click', resumeGame);
+      document.getElementById('restart-btn').addEventListener('click', restartGame);
+      document.getElementById('menu-btn').addEventListener('click', showMainMenu);
+      document.getElementById('gameover-restart-btn').addEventListener('click', restartGame);
+      document.getElementById('gameover-menu-btn').addEventListener('click', showMainMenu);
 
-      // 暴露游戏实例到全局 (用于调试)
-      window.game = game;
+      function startGame() {
+        document.getElementById('start-menu').style.display = 'none';
+        game.start();
+      }
+
+      function showInstructions() {
+        document.getElementById('instructions-modal').style.display = 'flex';
+      }
+
+      function hideInstructions() {
+        document.getElementById('instructions-modal').style.display = 'none';
+      }
+
+      function resumeGame() {
+        document.getElementById('pause-menu').style.display = 'none';
+        game.resume();
+      }
+
+      function restartGame() {
+        document.getElementById('pause-menu').style.display = 'none';
+        document.getElementById('gameover-menu').style.display = 'none';
+        game.restart();
+      }
+
+      function showMainMenu() {
+        document.getElementById('pause-menu').style.display = 'none';
+        document.getElementById('gameover-menu').style.display = 'none';
+        document.getElementById('start-menu').style.display = 'flex';
+        game.showMenu();
+      }
+
+      function updatePauseMenu() {
+        const pauseMenu = document.getElementById('pause-menu');
+        if (game.isPaused()) {
+          pauseMenu.style.display = 'flex';
+        } else {
+          pauseMenu.style.display = 'none';
+        }
+      }
+
+      // 监听游戏状态变化
+      game.onGameOver = function(score, isNewRecord) {
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('gameover-highscore').textContent = Math.max(score, Storage.getHighScore());
+        document.getElementById('new-record').style.display = isNewRecord ? 'block' : 'none';
+        document.getElementById('gameover-menu').style.display = 'flex';
+      };
+
+      game.onPause = function() {
+        document.getElementById('pause-menu').style.display = 'flex';
+      };
+
+      game.onResume = function() {
+        document.getElementById('pause-menu').style.display = 'none';
+      };
+
+      // 初始调用一次 resize
+      handleResize();
     });
   </script>
 </body>

@@ -97,8 +97,127 @@ class Game {
       }
     });
 
+    // 不立即开始游戏循环，等待用户点击开始按钮
+    this.gameLoopRunning = false;
+  }
+
+  /**
+   * 开始游戏
+   */
+  start() {
+    if (this.gameLoopRunning) return;
+    
+    this.state = GameState.PLAYING;
+    this.gameLoopRunning = true;
+    this.lastTime = performance.now();
+    this.accumulator = 0;
+    
     // 开始游戏循环
-    this.startGameLoop();
+    requestAnimationFrame((t) => this.gameLoop(t));
+  }
+
+  /**
+   * 暂停游戏
+   */
+  pause() {
+    if (this.state !== GameState.PLAYING || !this.gameLoopRunning) return;
+    
+    this.state = GameState.PAUSED;
+    this.gameLoopRunning = false;
+    
+    // 触发暂停事件
+    if (this.onPause) {
+      this.onPause();
+    }
+  }
+
+  /**
+   * 恢复游戏
+   */
+  resume() {
+    if (this.state !== GameState.PAUSED) return;
+    
+    this.state = GameState.PLAYING;
+    this.gameLoopRunning = true;
+    this.lastTime = performance.now();
+    
+    // 开始游戏循环
+    requestAnimationFrame((t) => this.gameLoop(t));
+    
+    // 触发恢复事件
+    if (this.onResume) {
+      this.onResume();
+    }
+  }
+
+  /**
+   * 切换暂停状态
+   */
+  togglePause() {
+    if (this.state === GameState.PLAYING) {
+      this.pause();
+    } else if (this.state === GameState.PAUSED) {
+      this.resume();
+    }
+  }
+
+  /**
+   * 是否暂停
+   */
+  isPaused() {
+    return this.state === GameState.PAUSED;
+  }
+
+  /**
+   * 重新开始游戏
+   */
+  restart() {
+    // 重置游戏状态
+    this.state = GameState.MENU;
+    this.gameLoopRunning = false;
+    
+    // 重置分数和道具
+    this.score = 0;
+    this.bombCount = GAME_CONFIG.INITIAL.BOMB_COUNT;
+    this.effectTexts = [];
+    
+    // 重置玩家
+    if (this.player) {
+      this.player.reset();
+    }
+    
+    // 清空敌机
+    if (this.enemyManager) {
+      this.enemyManager.clear();
+    }
+    
+    // 清空道具
+    if (this.itemManager) {
+      this.itemManager.clear();
+    }
+    
+    // 清空子弹
+    if (this.bulletPool) {
+      this.bulletPool.clear();
+    }
+    
+    // 清空粒子
+    if (this.particleSystem) {
+      this.particleSystem.clear();
+    }
+    
+    // 重新开始游戏
+    setTimeout(() => {
+      this.start();
+    }, 100);
+  }
+
+  /**
+   * 显示主菜单
+   */
+  showMenu() {
+    this.state = GameState.MENU;
+    this.gameLoopRunning = false;
   }
   
   /**
@@ -114,22 +233,22 @@ class Game {
   }
 
   /**
-   * 开始游戏循环
+   * 处理页面关闭事件
    */
-  startGameLoop() {
-    this.lastTime = performance.now();
-    this.loop = this.loop.bind(this);
-    requestAnimationFrame(this.loop);
-
-    // 处理退出事件
-    window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+  handleBeforeUnload() {
+    // 保存最高分
+    if (this.score > this.highScore) {
+      Storage.setHighScore(this.score);
+    }
   }
 
   /**
    * 游戏主循环
    * @param {number} timestamp - 当前时间戳
    */
-  loop(timestamp) {
+  gameLoop(timestamp) {
+    if (!this.gameLoopRunning) return;
+    
     const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
 
     // 暂停状态下也需要更新输入状态
@@ -139,7 +258,7 @@ class Game {
       if (this.input.isKeyJustPressed('Escape') || this.input.isKeyJustPressed('KeyP')) {
         this.resume();
       }
-      requestAnimationFrame(this.loop);
+      requestAnimationFrame((t) => this.gameLoop(t));
       return;
     }
 
@@ -171,7 +290,7 @@ class Game {
       this.touchHandler.draw(this.ctx);
     }
 
-    requestAnimationFrame(this.loop);
+    requestAnimationFrame((t) => this.gameLoop(t));
   }
 
   /**
@@ -616,9 +735,11 @@ class Game {
    */
   gameOver() {
     this.state = GameState.GAMEOVER;
+    this.gameLoopRunning = false;
 
     // 更新最高分
-    if (this.score > this.highScore) {
+    const isNewRecord = this.score > this.highScore;
+    if (isNewRecord) {
       this.highScore = this.score;
       Storage.saveHighScore(this.highScore);
     }
@@ -631,6 +752,11 @@ class Game {
       30,
       150
     );
+
+    // 触发游戏结束事件
+    if (this.onGameOver) {
+      this.onGameOver(this.score, isNewRecord);
+    }
   }
 
   /**
@@ -645,6 +771,7 @@ class Game {
    */
   returnToMenu() {
     this.state = GameState.MENU;
+    this.gameLoopRunning = false;
     this.background.reset();
   }
 
