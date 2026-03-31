@@ -1,0 +1,209 @@
+/* 飞机大战 - 样式文件 */
+
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 页面背景 */
+body {
+  background: #000;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Microsoft YaHei', Arial, sans-serif;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+}
+
+/* 游戏容器 */
+#game-container {
+  position: absolute;
+  background: #0a0a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0, 191, 255, 0.3),
+              0 0 60px rgba(0, 191, 255, 0.1);
+}
+
+/* 游戏画布 */
+#gameCanvas {
+  display: block;
+  background: transparent;
+  image-rendering: pixelated; /* 保持像素清晰 */
+}
+
+/* 加载界面 */
+#loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+/* 加载动画 */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(0, 191, 255, 0.3);
+  border-top-color: #00BFFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#loading p {
+  color: #FFF;
+  font-size: 18px;
+}
+
+/* 页面装饰元素 */
+body::before,
+body::after {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+body::before {
+  top: -100px;
+  left: -100px;
+  background: radial-gradient(circle, #00BFFF 0%, transparent 70%);
+}
+
+body::after {
+  bottom: -100px;
+  right: -100px;
+  background: radial-gradient(circle, #FF4444 0%, transparent 70%);
+}
+
+/* 隐藏滚动条 */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* 禁用文本选择 */
+#game-container {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 移动设备适配 */
+@media (max-width: 500px) {
+  #game-container {
+    box-shadow: none;
+    border-radius: 0;
+    width: 100% !important;
+    height: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+  }
+
+  body {
+    padding: 0;
+    margin: 0;
+  }
+
+  body::before,
+  body::after {
+    display: none;
+  }
+}
+
+/* 触摸设备优化 */
+@media (pointer: coarse) {
+  /* 禁用鼠标悬停效果 */
+  *:hover {
+    background: none;
+  }
+  
+  /* 防止触摸延迟 */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+  
+  /* 防止双击缩放 */
+  * {
+    touch-action: manipulation;
+  }
+}
+
+/* 全屏模式优化 */
+@media (orientation: portrait) {
+  #game-container {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+  }
+}
+
+/* 高分辨率屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #gameCanvas {
+    image-rendering: auto;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  body {
+    background: white;
+  }
+
+  #game-container,
+  #loading {
+    display: none;
+  }
+}
+
+/* 焦点样式 */
+*:focus {
+  outline: none;
+}
+
+/* 实用类 */
+.hidden {
+  display: none !important;
+}
+
+.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 屏幕闪烁效果(用于炸弹等) */
+.flash {
+  animation: flash 0.2s ease-out;
+}
+
+@keyframes flash {
+  0% {
+    filter: brightness(2);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}

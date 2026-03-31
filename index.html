@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>飞机大战 - Plane War</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>加载中...</p>
+  </div>
+
+  <!-- 游戏脚本 -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/touch.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/particle.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/bullet.js"></script>
+  <script src="js/item.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+
+  <script>
+    // 游戏初始化
+    window.addEventListener('load', function() {
+      const canvas = document.getElementById('gameCanvas');
+      const loading = document.getElementById('loading');
+
+      // 创建游戏实例
+      const game = new Game(canvas);
+
+      // 隐藏加载界面
+      loading.style.display = 'none';
+
+      // 处理窗口大小变化
+      window.addEventListener('resize', handleResize);
+
+      // 处理失去焦点时自动暂停
+      window.addEventListener('blur', handleBlur);
+
+      // 处理暂停按键
+      window.addEventListener('keydown', handleKeyDown);
+
+      function handleResize() {
+        const container = document.getElementById('game-container');
+        
+        // 检测是否为移动设备（屏幕宽度小于 500px）
+        const isMobile = window.innerWidth <= 500;
+        
+        if (isMobile) {
+          // 移动端：全屏显示
+          container.style.width = '100vw';
+          container.style.height = '100vh';
+          container.style.top = '0';
+          container.style.left = '0';
+          container.style.margin = '0';
+          container.style.position = 'fixed';
+        } else {
+          // PC 端：保持 3:5 的比例，最大不超过 480x720
+          const maxWidth = 480;
+          const maxHeight = 720;
+          const ratio = 3 / 5;
+
+          let containerWidth = Math.min(window.innerWidth - 40, maxWidth);
+          let containerHeight = containerWidth / ratio;
+
+          // 确保不超过屏幕高度
+          if (containerHeight > window.innerHeight - 40) {
+            containerHeight = window.innerHeight - 40;
+            containerWidth = containerHeight * ratio;
+          }
+
+          container.style.width = containerWidth + 'px';
+          container.style.height = containerHeight + 'px';
+          container.style.top = '50%';
+          container.style.left = '50%';
+          container.style.marginTop = -(containerHeight / 2) + 'px';
+          container.style.marginLeft = -(containerWidth / 2) + 'px';
+          container.style.position = 'absolute';
+        }
+
+        // Canvas 保持固定分辨率，通过 CSS 缩放显示
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        
+        // 通知触摸处理器更新按钮位置
+        if (game && game.touchHandler) {
+          game.touchHandler.updateButtonPositions();
+        }
+      }
+
+      function handleBlur() {
+        if (game.state === GameState.PLAYING) {
+          game.pause();
+        }
+      }
+
+      function handleKeyDown(e) {
+        // 在暂停状态下按 P 或 ESC 继续游戏
+        if (game.state === GameState.PAUSED) {
+          if (e.code === 'KeyP' || e.code === 'Escape') {
+            game.resume();
+          }
+        }
+      }
+
+      // 初始调整大小
+      handleResize();
+
+      // 暴露游戏实例到全局 (用于调试)
+      window.game = game;
+    });
+  </script>
+</body>
+</html>
