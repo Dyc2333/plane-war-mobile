@@ -1,0 +1,7 @@
+# Gitee Pages 配置文件
+version: 1
+sections:
+  - path: /
+    type: build
+    source: ./
+    destination: /
